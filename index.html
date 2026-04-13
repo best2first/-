@@ -1,0 +1,198 @@
+import React, { useState, useEffect } from 'react';
+import { History, Trash2, Delete, Equal, Plus, Minus, X, Divide, Percent } from 'lucide-react';
+
+export default function App() {
+  const [display, setDisplay] = useState('0');
+  const [equation, setEquation] = useState('');
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [isNewCalculation, setIsNewCalculation] = useState(true);
+
+  // Function to safely evaluate simple mathematical expressions without using direct eval
+  const safeEval = (str) => {
+    try {
+      // Replace visual symbols with computer-readable operators
+      const tokenized = str.replace(/×/g, '*').replace(/÷/g, '/').replace(/\s/g, '');
+      
+      // Basic validation: only numbers, decimal points, and operators allowed
+      if (!/^[\d.+\-*/()]+$/.test(tokenized)) {
+        throw new Error('Invalid characters');
+      }
+
+      // Indirect eval is safer for bundlers as it executes in global scope
+      const result = Function('"use strict"; return (' + tokenized + ')')();
+      
+      if (!isFinite(result)) return 'Error';
+      return result;
+    } catch (e) {
+      return 'Error';
+    }
+  };
+
+  const handleNumber = (num) => {
+    if (isNewCalculation) {
+      setDisplay(num);
+      setIsNewCalculation(false);
+    } else {
+      setDisplay(display === '0' ? num : display + num);
+    }
+  };
+
+  const handleOperator = (op) => {
+    setEquation(display + ' ' + op + ' ');
+    setIsNewCalculation(true);
+  };
+
+  const calculate = () => {
+    const fullEquation = equation + display;
+    const result = safeEval(fullEquation);
+
+    if (result === 'Error') {
+      setDisplay('Error');
+    } else {
+      const formattedResult = Number.isInteger(result) 
+        ? result.toString() 
+        : parseFloat(result.toFixed(8)).toString();
+
+      const newHistoryItem = {
+        id: Date.now(),
+        eq: fullEquation,
+        res: formattedResult
+      };
+
+      setHistory([newHistoryItem, ...history]);
+      setDisplay(formattedResult);
+    }
+    
+    setEquation('');
+    setIsNewCalculation(true);
+  };
+
+  const clearAll = () => {
+    setDisplay('0');
+    setEquation('');
+    setIsNewCalculation(true);
+  };
+
+  const deleteLast = () => {
+    if (display.length > 1) {
+      setDisplay(display.slice(0, -1));
+    } else {
+      setDisplay('0');
+      setIsNewCalculation(true);
+    }
+  };
+
+  const handlePercent = () => {
+    const val = parseFloat(display) / 100;
+    setDisplay(val.toString());
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 relative">
+        
+        {/* Header */}
+        <div className="p-6 flex justify-between items-center bg-white">
+          <h1 className="text-xl font-bold text-slate-800">계산기</h1>
+          <button 
+            onClick={() => setShowHistory(!showHistory)}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
+            aria-label="기록 보기"
+          >
+            <History size={20} />
+          </button>
+        </div>
+
+        {/* Display Area */}
+        <div className="px-6 py-8 text-right bg-slate-50/50">
+          <div className="h-6 text-slate-400 text-sm mb-1 overflow-hidden">
+            {equation}
+          </div>
+          <div className="text-5xl font-semibold text-slate-800 overflow-hidden text-ellipsis whitespace-nowrap">
+            {display}
+          </div>
+        </div>
+
+        {/* Button Grid */}
+        <div className="p-6 grid grid-cols-4 gap-3 bg-white">
+          <button onClick={clearAll} className="h-16 rounded-2xl bg-orange-100 text-orange-600 font-bold hover:bg-orange-200 transition-colors">AC</button>
+          <button onClick={deleteLast} className="h-16 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors">
+            <Delete size={20} />
+          </button>
+          <button onClick={handlePercent} className="h-16 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors">
+            <Percent size={20} />
+          </button>
+          <button onClick={() => handleOperator('÷')} className="h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg shadow-blue-200">
+            <Divide size={20} />
+          </button>
+
+          {[7, 8, 9].map(n => (
+            <button key={n} onClick={() => handleNumber(n.toString())} className="h-16 rounded-2xl bg-white border border-slate-100 text-slate-700 text-xl font-medium hover:bg-slate-50 transition-colors shadow-sm">{n}</button>
+          ))}
+          <button onClick={() => handleOperator('×')} className="h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg shadow-blue-200">
+            <X size={20} />
+          </button>
+
+          {[4, 5, 6].map(n => (
+            <button key={n} onClick={() => handleNumber(n.toString())} className="h-16 rounded-2xl bg-white border border-slate-100 text-slate-700 text-xl font-medium hover:bg-slate-50 transition-colors shadow-sm">{n}</button>
+          ))}
+          <button onClick={() => handleOperator('-')} className="h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg shadow-blue-200">
+            <Minus size={20} />
+          </button>
+
+          {[1, 2, 3].map(n => (
+            <button key={n} onClick={() => handleNumber(n.toString())} className="h-16 rounded-2xl bg-white border border-slate-100 text-slate-700 text-xl font-medium hover:bg-slate-50 transition-colors shadow-sm">{n}</button>
+          ))}
+          <button onClick={() => handleOperator('+')} className="h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg shadow-blue-200">
+            <Plus size={20} />
+          </button>
+
+          <button onClick={() => handleNumber('0')} className="col-span-2 h-16 rounded-2xl bg-white border border-slate-100 text-slate-700 text-xl font-medium hover:bg-slate-50 transition-colors shadow-sm text-left px-8">0</button>
+          <button onClick={() => handleNumber('.')} className="h-16 rounded-2xl bg-white border border-slate-100 text-slate-700 text-xl font-medium hover:bg-slate-50 transition-colors shadow-sm">.</button>
+          <button onClick={calculate} className="h-16 rounded-2xl bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors shadow-lg shadow-green-200">
+            <Equal size={24} />
+          </button>
+        </div>
+
+        {/* History Modal Overlay */}
+        {showHistory && (
+          <div className="absolute inset-0 bg-white/95 backdrop-blur-md p-6 z-20 transition-all">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-slate-800">계산 기록</h2>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setHistory([])}
+                  className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                  title="기록 전체 삭제"
+                >
+                  <Trash2 size={18} />
+                </button>
+                <button 
+                  onClick={() => setShowHistory(false)}
+                  className="px-3 py-1 bg-slate-100 rounded-lg text-sm text-slate-600 hover:bg-slate-200 transition-colors"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+            <div className="space-y-4 overflow-y-auto max-h-[80%] pr-2">
+              {history.length === 0 ? (
+                <div className="text-center py-20 text-slate-400 italic">
+                  기록이 없습니다.
+                </div>
+              ) : (
+                history.map((item) => (
+                  <div key={item.id} className="border-b border-slate-100 pb-3 text-right">
+                    <div className="text-sm text-slate-400 mb-1">{item.eq} =</div>
+                    <div className="text-xl font-semibold text-slate-700">{item.res}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
